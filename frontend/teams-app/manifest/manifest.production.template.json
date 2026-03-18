@@ -1,0 +1,74 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "<TEAMS_MANIFEST_APP_ID>",
+  "developer": {
+    "name": "QR Teams",
+    "websiteUrl": "https://app.yourdomain.com",
+    "privacyUrl": "https://app.yourdomain.com/privacy",
+    "termsOfUseUrl": "https://app.yourdomain.com/terms"
+  },
+  "name": {
+    "short": "QR Teams",
+    "full": "QR Teams Attendance Panel"
+  },
+  "description": {
+    "short": "Attendance QR in Teams meetings",
+    "full": "Student-facing attendance QR experience in Teams meetings."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#4F46E5",
+  "staticTabs": [
+    {
+      "entityId": "qr-panel-static",
+      "name": "QR Panel",
+      "contentUrl": "https://app.yourdomain.com/teams/qr-panel",
+      "websiteUrl": "https://app.yourdomain.com/teams/qr-panel",
+      "scopes": [
+        "personal",
+        "groupChat"
+      ],
+      "context": [
+        "personalTab",
+        "meetingChatTab",
+        "meetingDetailsTab",
+        "meetingSidePanel",
+        "meetingStage"
+      ]
+    }
+  ],
+  "activities": {
+    "activityTypes": [
+      {
+        "type": "attendanceReady",
+        "description": "Attendance QR is ready",
+        "templateText": "{actor} says attendance QR is ready"
+      }
+    ]
+  },
+  "webApplicationInfo": {
+    "id": "<AZURE_APP_CLIENT_ID>",
+    "resource": "<APP_ID_URI_OR_RESOURCE>"
+  },
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [
+        {
+          "type": "Application",
+          "name": "TeamsActivity.Send.Chat"
+        },
+        {
+          "type": "Application",
+          "name": "TeamsActivity.Send.User"
+        }
+      ]
+    }
+  },
+  "validDomains": [
+    "app.yourdomain.com"
+  ]
+}

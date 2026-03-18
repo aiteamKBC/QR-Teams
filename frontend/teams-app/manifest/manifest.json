@@ -1,0 +1,56 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "6f0fb0d3-0568-4f16-8fb8-5f6db8bd7fcb",
+  "developer": {
+    "name": "QR Teams",
+    "websiteUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev",
+    "privacyUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev",
+    "termsOfUseUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev"
+  },
+  "name": {
+    "short": "QR Teams",
+    "full": "QR Teams Attendance Panel"
+  },
+  "description": {
+    "short": "Show live meeting QR for attendance",
+    "full": "Displays the active QR session for a Teams meeting and auto-refreshes live attendance QR data."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#4F46E5",
+  "staticTabs": [
+    {
+      "entityId": "qr-panel-static",
+      "name": "QR Panel",
+      "contentUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev/teams/qr-panel",
+      "websiteUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev/teams/qr-panel",
+      "scopes": [
+        "personal",
+        "groupChat"
+      ],
+      "context": [
+        "personalTab",
+        "meetingChatTab",
+        "meetingDetailsTab",
+        "meetingSidePanel",
+        "meetingStage"
+      ]
+    }
+  ],
+  "activities": {
+    "activityTypes": [
+      {
+        "type": "attendanceReady",
+        "description": "Attendance QR is ready",
+        "templateText": "{actor} says attendance QR is ready"
+      }
+    ]
+  },
+  "validDomains": [
+    "gastroenteritic-semisolemnly-kelly.ngrok-free.dev"
+  ]
+}

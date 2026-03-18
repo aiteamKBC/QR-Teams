@@ -1,0 +1,38 @@
+# Global
+.DS_Store
+Thumbs.db
+
+# Environments
+backend/.env*
+frontend/.env*
+!backend/.env.example
+!frontend/.env.example
+!frontend/.env.teams.example
+
+# Python / Django
+backend/__pycache__/
+backend/**/*.pyc
+backend/db.sqlite3
+backend/runserver_out.log
+backend/runserver_err.log
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.venv/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs / temp
+*.log
+*.tmp
+
+# Packaged artifacts
+frontend/teams-app/manifest/*.zip
