@@ -1,8 +1,8 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "2.0.8",
-  "id": "1cdc607e-a139-4efa-bb3f-e5425c35741e",
+  "version": "2.0.11",
+  "id": "ff505d02-cf07-4a2d-8bf8-6e04d629954d",
   "name": {
     "short": "KBC Attendance",
     "full": "KBC Attendance Panel"
@@ -22,12 +22,15 @@
     "color": "color.png"
   },
   "accentColor": "#4F46E5",
-  "configurableTabs": [
+  "staticTabs": [
     {
-      "configurationUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
-      "canUpdateConfiguration": true,
+      "entityId": "qr-panel-static",
+      "name": "QR Panel",
+      "contentUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
+      "websiteUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
       "scopes": [
-        "groupChat"
+        "groupChat",
+        "meeting"
       ],
       "context": [
         "meetingChatTab",
@@ -37,33 +40,9 @@
       ]
     }
   ],
-  "staticTabs": [
-    {
-      "entityId": "qr-panel-static",
-      "name": "QR Panel",
-      "contentUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
-      "websiteUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
-      "scopes": [
-        "groupChat"
-      ],
-      "context": [
-        "meetingChatTab",
-        "meetingDetailsTab",
-        "meetingSidePanel"
-      ]
-    }
-  ],
   "meetingExtensionDefinition": {
     "scenes": [],
     "supportsStreaming": false
-  },
-  "permissions": [
-    "identity",
-    "messageTeamMembers"
-  ],
-  "defaultInstallScope": "meetings",
-  "defaultGroupCapability": {
-    "meetings": "tab"
   },
   "validDomains": [
     "qrteams.kentbusinesscollege.net"
