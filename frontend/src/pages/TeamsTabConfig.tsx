@@ -13,8 +13,8 @@ export default function TeamsTabConfig() {
 
   const configPreview = useMemo(
     () => ({
-      entityId: "teams-qr-panel",
-      suggestedDisplayName: "QR Attendance Panel",
+      entityId: "qr-panel-static",
+      suggestedDisplayName: "KBC Attendance",
       contentUrl: CONTENT_URL,
       websiteUrl: CONTENT_URL,
     }),

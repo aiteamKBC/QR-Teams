@@ -4,14 +4,14 @@
   "version": "1.0.0",
   "id": "<TEAMS_MANIFEST_APP_ID>",
   "developer": {
-    "name": "QR Teams",
+    "name": "KBC Attendance",
     "websiteUrl": "https://app.yourdomain.com",
     "privacyUrl": "https://app.yourdomain.com/privacy",
     "termsOfUseUrl": "https://app.yourdomain.com/terms"
   },
   "name": {
-    "short": "QR Teams",
-    "full": "QR Teams Attendance Panel"
+    "short": "KBC Attendance",
+    "full": "KBC Attendance Panel"
   },
   "description": {
     "short": "Attendance QR in Teams meetings",

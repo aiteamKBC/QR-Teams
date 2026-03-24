@@ -1,17 +1,17 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "1.0.0",
-  "id": "6f0fb0d3-0568-4f16-8fb8-5f6db8bd7fcb",
-  "developer": {
-    "name": "QR Teams",
-    "websiteUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev",
-    "privacyUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev",
-    "termsOfUseUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev"
-  },
+  "version": "2.0.5",
+  "id": "ff505d02-cf07-4a2d-8bf8-6e04d629954d",
   "name": {
-    "short": "QR Teams",
-    "full": "QR Teams Attendance Panel"
+    "short": "KBC Attendance",
+    "full": "KBC Attendance Panel"
+  },
+  "developer": {
+    "name": "KBC Attendance",
+    "websiteUrl": "https://qrteams.kentbusinesscollege.net",
+    "privacyUrl": "https://qrteams.kentbusinesscollege.net",
+    "termsOfUseUrl": "https://qrteams.kentbusinesscollege.net"
   },
   "description": {
     "short": "Show live meeting QR for attendance",
@@ -26,31 +26,23 @@
     {
       "entityId": "qr-panel-static",
       "name": "QR Panel",
-      "contentUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev/teams/qr-panel",
-      "websiteUrl": "https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev/teams/qr-panel",
+      "contentUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
+      "websiteUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
       "scopes": [
-        "personal",
         "groupChat"
       ],
       "context": [
-        "personalTab",
         "meetingChatTab",
         "meetingDetailsTab",
-        "meetingSidePanel",
-        "meetingStage"
+        "meetingSidePanel"
       ]
     }
   ],
-  "activities": {
-    "activityTypes": [
-      {
-        "type": "attendanceReady",
-        "description": "Attendance QR is ready",
-        "templateText": "{actor} says attendance QR is ready"
-      }
-    ]
+  "meetingExtensionDefinition": {
+    "scenes": [],
+    "supportsStreaming": false
   },
   "validDomains": [
-    "gastroenteritic-semisolemnly-kelly.ngrok-free.dev"
+    "qrteams.kentbusinesscollege.net"
   ]
 }
