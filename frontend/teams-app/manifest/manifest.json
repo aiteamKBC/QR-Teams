@@ -29,7 +29,6 @@
       "contentUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
       "websiteUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
       "scopes": [
-        "groupChat",
         "meeting"
       ],
       "context": [
