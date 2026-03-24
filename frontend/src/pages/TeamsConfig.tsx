@@ -34,19 +34,11 @@ export default function TeamsConfig() {
     void initializeConfig();
   }, []);
 
-  useEffect(() => {
-    if (pages?.config) {
-      setTimeout(() => {
-        (pages.config as unknown as { submitHandler?: () => void })
-          .submitHandler?.();
-      }, 300);
-    }
-  }, []);
-
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <p style={styles.status}>Loading...</p>
+        <h1 style={styles.title}>Open attendance panel</h1>
+        <p style={styles.status}>Select Save to continue</p>
       </div>
     </div>
   );
@@ -67,18 +59,25 @@ const styles: Record<string, CSSProperties> = {
   },
   card: {
     width: "100%",
-    maxWidth: 320,
+    maxWidth: 360,
     backgroundColor: "#111827",
     border: "1px solid #1f2937",
     borderRadius: 12,
     padding: 24,
     boxSizing: "border-box",
+    textAlign: "center",
+  },
+  title: {
+    margin: 0,
+    fontSize: 24,
+    lineHeight: 1.2,
+    fontWeight: 700,
+    color: "#f8fafc",
   },
   status: {
-    margin: 0,
-    fontSize: 16,
-    lineHeight: 1.2,
+    margin: "10px 0 0",
+    fontSize: 14,
+    lineHeight: 1.4,
     color: "#cbd5e1",
-    textAlign: "center",
   },
 };
