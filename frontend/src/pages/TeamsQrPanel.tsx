@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { app, pages, sharing } from "@microsoft/teams-js";
+import { Button } from "@fluentui/react-components";
+import { ShareRegular } from "@fluentui/react-icons";
 
 const STUDENT_UI_IMAGE_SRC = "/assets/attendance-student-ui.png";
+const APP_BASE_URL =
+  import.meta.env.VITE_PUBLIC_APP_BASE_URL?.replace(/\/$/, "") ||
+  window.location.origin;
+const PANEL_URL = `${APP_BASE_URL}/teams/qr-panel`;
+const SHARE_SUBPAGE_ID = "qr-panel-static";
+
+type ShareMode = "link" | "copy";
 
 export default function TeamsQrPanel() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [shareMode, setShareMode] = useState<ShareMode>("copy");
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareMessage, setShareMessage] = useState("");
 
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
@@ -19,6 +32,28 @@ export default function TeamsQrPanel() {
     };
   }, []);
 
+  useEffect(() => {
+    let disposed = false;
+
+    async function initializeTeams() {
+      try {
+        await app.initialize();
+        if (disposed) {
+          return;
+        }
+        setShareMode(sharing.isSupported() ? "link" : "copy");
+      } catch {
+        setShareMode("copy");
+      }
+    }
+
+    void initializeTeams();
+
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
   const imageSrc = useMemo(
     () => `${STUDENT_UI_IMAGE_SRC}?r=${retryCount}`,
     [retryCount],
@@ -28,6 +63,51 @@ export default function TeamsQrPanel() {
     setHasError(false);
     setIsLoaded(false);
     setRetryCount((value) => value + 1);
+  };
+
+  const handleShare = async () => {
+    if (shareBusy) {
+      return;
+    }
+
+    setShareBusy(true);
+    setShareMessage("");
+
+    try {
+      await app.initialize();
+
+      if (shareMode === "link") {
+        if (sharing.isSupported()) {
+          await sharing.shareWebContent({
+            content: [
+              {
+                type: "URL",
+                url: PANEL_URL,
+                message: "Open the KBC Attendance panel in Teams.",
+                preview: true,
+              },
+            ],
+          });
+        } else {
+          pages.shareDeepLink({
+            subPageId: SHARE_SUBPAGE_ID,
+            subPageLabel: "KBC Attendance",
+            subPageWebUrl: PANEL_URL,
+          });
+        }
+
+        setShareMessage("Share dialog opened.");
+        return;
+      }
+
+      await navigator.clipboard.writeText(PANEL_URL);
+      setShareMessage("Panel link copied.");
+    } catch (error) {
+      console.error("Failed to share panel", error);
+      setShareMessage("Could not share the panel.");
+    } finally {
+      setShareBusy(false);
+    }
   };
 
   return (
@@ -79,6 +159,19 @@ export default function TeamsQrPanel() {
             </div>
           )}
         </div>
+
+        <Button
+          appearance="secondary"
+          icon={<ShareRegular />}
+          size="large"
+          shape="rounded"
+          style={shareBusy ? styles.shareButtonDisabled : styles.shareButton}
+          onClick={handleShare}
+          disabled={shareBusy}
+        >
+          {shareBusy ? "Sharing..." : "Share"}
+        </Button>
+        {shareMessage ? <p style={styles.shareMessage}>{shareMessage}</p> : null}
       </div>
     </div>
   );
@@ -105,7 +198,7 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
   title: {
     margin: 0,
@@ -206,5 +299,26 @@ const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     color: "#ffffff",
     background: "#4f46e5",
+  },
+  shareButton: {
+    minWidth: 168,
+    padding: "12px 20px",
+    fontWeight: 700,
+    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.18)",
+  },
+  shareButtonDisabled: {
+    minWidth: 168,
+    padding: "12px 20px",
+    fontWeight: 700,
+    opacity: 0.72,
+    boxShadow: "none",
+  },
+  shareMessage: {
+    margin: 0,
+    minHeight: 20,
+    color: "#dbe4ff",
+    fontSize: 13,
+    lineHeight: 1.4,
+    textAlign: "center",
   },
 };
