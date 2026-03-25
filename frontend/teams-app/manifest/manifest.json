@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "2.0.11",
+  "version": "2.0.12",
   "id": "ff505d02-cf07-4a2d-8bf8-6e04d629954d",
   "name": {
     "short": "KBC Attendance",
@@ -29,7 +29,22 @@
       "contentUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
       "websiteUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
       "scopes": [
-        "meeting"
+        "groupchat"
+      ],
+      "context": [
+        "meetingChatTab",
+        "meetingDetailsTab",
+        "meetingSidePanel",
+        "meetingStage"
+      ]
+    }
+  ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://qrteams.kentbusinesscollege.net/teams/config",
+      "canUpdateConfiguration": false,
+      "scopes": [
+        "groupchat"
       ],
       "context": [
         "meetingChatTab",
