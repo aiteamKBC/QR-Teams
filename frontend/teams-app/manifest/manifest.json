@@ -1,8 +1,8 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "2.0.15",
-  "id": "ff505d02-cf07-4a2d-8bf8-6e04d629954d",
+  "version": "2.0.21",
+  "id": "4f3868b0-34ed-4a23-a940-8a38c4a2c4cf",
   "name": {
     "short": "KBC Attendance",
     "full": "KBC Attendance Panel"
@@ -27,9 +27,11 @@
       "configurationUrl": "https://qrteams.kentbusinesscollege.net/teams/config",
       "canUpdateConfiguration": false,
       "scopes": [
-        "groupchat"
+        "team",
+        "groupChat"
       ],
       "context": [
+        "channelTab",
         "meetingChatTab",
         "meetingDetailsTab",
         "meetingSidePanel",
@@ -37,9 +39,19 @@
       ]
     }
   ],
-  "meetingExtensionDefinition": {
-    "scenes": [],
-    "supportsStreaming": false
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [
+        {
+          "type": "Delegated",
+          "name": "MeetingStage.Write.Chat"
+        },
+        {
+          "type": "Delegated",
+          "name": "ChannelMeetingStage.Write.Group"
+        }
+      ]
+    }
   },
   "validDomains": [
     "qrteams.kentbusinesscollege.net"

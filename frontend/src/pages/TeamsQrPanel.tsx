@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { app, pages, sharing } from "@microsoft/teams-js";
+import { app, FrameContexts, meeting, pages, sharing } from "@microsoft/teams-js";
 import { Button } from "@fluentui/react-components";
 import { ShareRegular } from "@fluentui/react-icons";
 
@@ -10,7 +10,7 @@ const APP_BASE_URL =
 const PANEL_URL = `${APP_BASE_URL}/teams/qr-panel`;
 const SHARE_SUBPAGE_ID = "qr-panel-static";
 
-type ShareMode = "link" | "copy";
+type ShareMode = "stage" | "link" | "copy";
 
 export default function TeamsQrPanel() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -38,9 +38,36 @@ export default function TeamsQrPanel() {
     async function initializeTeams() {
       try {
         await app.initialize();
+        const context = await app.getContext();
         if (disposed) {
           return;
         }
+
+        const inMeetingSurface =
+          context.meeting !== undefined &&
+          (context.page.frameContext === FrameContexts.sidePanel ||
+            context.page.frameContext === FrameContexts.meetingStage);
+
+        if (inMeetingSurface) {
+          meeting.getAppContentStageSharingCapabilities((error, result) => {
+            if (disposed) {
+              return;
+            }
+
+            if (!error && result?.doesAppHaveSharePermission) {
+              setShareMode("stage");
+              return;
+            }
+
+            try {
+              setShareMode(sharing.isSupported() ? "link" : "copy");
+            } catch {
+              setShareMode("copy");
+            }
+          });
+          return;
+        }
+
         setShareMode(sharing.isSupported() ? "link" : "copy");
       } catch {
         setShareMode("copy");
@@ -74,6 +101,24 @@ export default function TeamsQrPanel() {
     setShareMessage("");
 
     try {
+      if (shareMode === "stage") {
+        await app.initialize();
+
+        await new Promise<void>((resolve, reject) => {
+          meeting.shareAppContentToStage((error, result) => {
+            if (error || !result) {
+              reject(new Error(error?.message || "Could not share panel to stage."));
+              return;
+            }
+
+            resolve();
+          }, PANEL_URL);
+        });
+
+        setShareMessage("Panel shared to the meeting stage.");
+        return;
+      }
+
       await app.initialize();
 
       if (shareMode === "link") {
@@ -169,7 +214,11 @@ export default function TeamsQrPanel() {
           onClick={handleShare}
           disabled={shareBusy}
         >
-          {shareBusy ? "Sharing..." : "Share"}
+          {shareBusy
+            ? "Sharing..."
+            : shareMode === "stage"
+              ? "Share to stage"
+              : "Share"}
         </Button>
         {shareMessage ? <p style={styles.shareMessage}>{shareMessage}</p> : null}
       </div>
