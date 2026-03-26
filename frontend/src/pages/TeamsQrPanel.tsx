@@ -373,11 +373,11 @@ export default function TeamsQrPanel() {
     setShareMessage("");
 
     try {
-      await navigator.clipboard.writeText(ATTENDANCE_URL);
-      setShareMessage("Attendance link copied. Paste it in Teams chat.");
+      window.open(ATTENDANCE_URL, "_blank", "noopener,noreferrer");
+      setShareMessage("Attendance link opened.");
     } catch (error) {
-      console.error("Failed to copy attendance link", error);
-      setShareMessage("Could not copy the attendance link.");
+      console.error("Failed to open attendance link", error);
+      setShareMessage("Could not open the attendance link.");
     } finally {
       setShareBusy(false);
     }
@@ -442,8 +442,16 @@ export default function TeamsQrPanel() {
           onClick={handleShare}
           disabled={shareBusy}
         >
-          {shareBusy ? "Copying..." : "Copy attendance link"}
+          {shareBusy ? "Opening..." : "Open attendance link"}
         </Button>
+        <a
+          href={ATTENDANCE_URL}
+          target="_blank"
+          rel="noreferrer"
+          style={styles.attendanceLink}
+        >
+          {ATTENDANCE_URL}
+        </a>
         {shareMessage ? <p style={styles.shareMessage}>{shareMessage}</p> : null}
       </div>
     </div>
@@ -592,6 +600,14 @@ const styles: Record<string, CSSProperties> = {
     color: "#dbe4ff",
     fontSize: 13,
     lineHeight: 1.4,
+    textAlign: "center",
+  },
+  attendanceLink: {
+    color: "#bfdbfe",
+    fontSize: 13,
+    lineHeight: 1.4,
+    textDecoration: "underline",
+    wordBreak: "break-all",
     textAlign: "center",
   },
 };
