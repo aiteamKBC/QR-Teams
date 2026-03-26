@@ -6,11 +6,11 @@ Current frontend ngrok URL:
 
 `manifest.json` is currently configured to use only this frontend domain:
 
-- `contentUrl`: `https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev/teams/qr-panel`
-- `websiteUrl`: `https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev/teams/qr-panel`
 - `validDomains`: `["gastroenteritic-semisolemnly-kelly.ngrok-free.dev"]`
-- `configurableTabs`: removed
-- `staticTabs`: includes meeting contexts (`meetingSidePanel`, `meetingChatTab`, `meetingDetailsTab`)
+- `staticTabs`: handles meeting surfaces without a Save/config page
+- `configurableTabs`: handles `team` channel tabs only
+- `context`: includes `channelTab`, `meetingSidePanel`, `meetingChatTab`, `meetingDetailsTab`, `meetingStage`
+- `manifest.json` can omit meeting-stage `resourceSpecific` permissions if you want the app to install without the extra consent prompt; in that mode, share flow falls back to link/deep-link instead of stage sharing
 - `activities.activityTypes`: includes `attendanceReady` for activity feed notification template
 
 ## Real Teams Meeting Test Flow (Single ngrok)
@@ -42,7 +42,7 @@ ngrok http 5173
    - `color.png`
    - `outline.png`
 6. Re-upload the custom app package in Microsoft Teams.
-7. Add/open the app tab in a real Teams meeting (no config/save step for new static pins).
+7. Upload the app package in Microsoft Teams, then add it inside the target Team/channel or meeting chat as needed.
 8. If you move to production domain, replace all ngrok URLs and `validDomains` then re-upload.
 
 ## Production manifest template

@@ -1,8 +1,8 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "1.0.0",
-  "id": "<TEAMS_MANIFEST_APP_ID>",
+  "version": "2.0.26",
+  "id": "5d1360ac-b336-4cd5-8db5-440296b1f366",
   "developer": {
     "name": "KBC Attendance",
     "websiteUrl": "https://app.yourdomain.com",
@@ -14,8 +14,8 @@
     "full": "KBC Attendance Panel"
   },
   "description": {
-    "short": "Attendance QR in Teams meetings",
-    "full": "Student-facing attendance QR experience in Teams meetings."
+    "short": "Show live meeting QR for attendance",
+    "full": "Displays the active QR session for a Teams meeting and auto-refreshes live attendance QR data."
   },
   "icons": {
     "outline": "outline.png",
@@ -29,45 +29,25 @@
       "contentUrl": "https://app.yourdomain.com/teams/qr-panel",
       "websiteUrl": "https://app.yourdomain.com/teams/qr-panel",
       "scopes": [
-        "personal",
+        "team",
         "groupChat"
       ],
       "context": [
-        "personalTab",
+        "channelTab",
+        "privateChatTab",
         "meetingChatTab",
         "meetingDetailsTab",
-        "meetingSidePanel",
-        "meetingStage"
+        "meetingSidePanel"
       ]
     }
   ],
-  "activities": {
-    "activityTypes": [
-      {
-        "type": "attendanceReady",
-        "description": "Attendance QR is ready",
-        "templateText": "{actor} says attendance QR is ready"
-      }
-    ]
+  "meetingExtensionDefinition": {
+    "supportsAnonymousGuestUsers": true
   },
-  "webApplicationInfo": {
-    "id": "<AZURE_APP_CLIENT_ID>",
-    "resource": "<APP_ID_URI_OR_RESOURCE>"
-  },
-  "authorization": {
-    "permissions": {
-      "resourceSpecific": [
-        {
-          "type": "Application",
-          "name": "TeamsActivity.Send.Chat"
-        },
-        {
-          "type": "Application",
-          "name": "TeamsActivity.Send.User"
-        }
-      ]
-    }
-  },
+  "supportedChannelTypes": [
+    "sharedChannels",
+    "privateChannels"
+  ],
   "validDomains": [
     "app.yourdomain.com"
   ]

@@ -1,16 +1,326 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { app, FrameContexts, meeting, pages, sharing } from "@microsoft/teams-js";
+import { app, sharing } from "@microsoft/teams-js";
 import { Button } from "@fluentui/react-components";
 import { ShareRegular } from "@fluentui/react-icons";
 
 const STUDENT_UI_IMAGE_SRC = "/assets/attendance-student-ui.png";
-const APP_BASE_URL =
-  import.meta.env.VITE_PUBLIC_APP_BASE_URL?.replace(/\/$/, "") ||
-  window.location.origin;
-const PANEL_URL = `${APP_BASE_URL}/teams/qr-panel`;
-const SHARE_SUBPAGE_ID = "qr-panel-static";
+const ATTENDANCE_URL = "https://attendance.kentbusinesscollege.net/";
 
-type ShareMode = "stage" | "link" | "copy";
+type ShareMode = "link" | "copy";
+type NoticeTone = "info" | "warning";
+type TeamsUserCategory = "member" | "guest" | "anonymous" | "external";
+type TeamsHostSurface = "meeting" | "channel" | "team" | "groupChat" | "unknown";
+type TeamsPageNotice = {
+  title: string;
+  message: string;
+  tone: NoticeTone;
+};
+type TeamsContextSnapshot = {
+  surface: TeamsHostSurface;
+  host: {
+    name: string;
+    clientType: string;
+    locale: string;
+    theme: string;
+  };
+  page: {
+    frameContext: string;
+    id: string;
+    subPageId: string;
+  };
+  user: {
+    id: string;
+    displayName: string;
+    loginHint: string;
+    userPrincipalName: string;
+    licenseType: string;
+    tenantId: string;
+    aadObjectId: string;
+  };
+  meeting: {
+    id: string;
+    role: string;
+  };
+  chat: {
+    id: string;
+  };
+  team: {
+    groupId: string;
+    displayName: string;
+  };
+  channel: {
+    id: string;
+    displayName: string;
+    hostTeamGroupId: string;
+    hostTenantId: string;
+  };
+};
+type TeamsUserDetection = {
+  category: TeamsUserCategory;
+  reason: string;
+};
+type TeamsRenderDecision = {
+  allowed: boolean;
+  reason: string;
+  limitations: string[];
+};
+
+const TEAMS_DEBUG_PREFIX = "[KBC Attendance][TeamsQrPanel]";
+
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function readObject(value: unknown) {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    const candidate = readString(value);
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return "";
+}
+
+function readPath(source: unknown, ...path: string[]) {
+  let current: unknown = source;
+
+  for (const segment of path) {
+    const currentObject = readObject(current);
+    if (!currentObject) {
+      return "";
+    }
+
+    current = currentObject[segment];
+  }
+
+  return readString(current);
+}
+
+function buildTeamsContextSnapshot(context: unknown): TeamsContextSnapshot {
+  const pageFrameContext = firstString(readPath(context, "page", "frameContext"));
+  const normalizedFrameContext = pageFrameContext.toLowerCase();
+  const meetingId = firstString(
+    readPath(context, "meeting", "id"),
+    readPath(context, "meeting", "meetingId"),
+  );
+  const chatId = firstString(readPath(context, "chat", "id"));
+  const teamGroupId = firstString(
+    readPath(context, "team", "groupId"),
+    readPath(context, "team", "internalId"),
+  );
+  const channelId = firstString(readPath(context, "channel", "id"));
+  const looksLikeMeetingSurface =
+    normalizedFrameContext.includes("meeting") || normalizedFrameContext === "sidepanel";
+  const surface = looksLikeMeetingSurface || meetingId
+    ? "meeting"
+    : normalizedFrameContext === "privatechattab" || chatId
+      ? "groupChat"
+      : channelId || normalizedFrameContext === "channeltab"
+        ? "channel"
+        : teamGroupId || normalizedFrameContext === "teamlevelapp"
+          ? "team"
+          : "unknown";
+
+  return {
+    surface,
+    host: {
+      name: firstString(readPath(context, "app", "host", "name"), "Teams"),
+      clientType: firstString(readPath(context, "app", "host", "clientType"), "unknown"),
+      locale: firstString(readPath(context, "app", "locale"), navigator.language, "en-US"),
+      theme: firstString(readPath(context, "app", "theme"), "default"),
+    },
+    page: {
+      frameContext: firstString(pageFrameContext, "unknown"),
+      id: readPath(context, "page", "id"),
+      subPageId: readPath(context, "page", "subPageId"),
+    },
+    user: {
+      id: readPath(context, "user", "id"),
+      displayName: firstString(
+        readPath(context, "user", "displayName"),
+        readPath(context, "user", "userPrincipalName"),
+      ),
+      loginHint: firstString(
+        readPath(context, "user", "loginHint"),
+        readPath(context, "user", "userPrincipalName"),
+        readPath(context, "user", "email"),
+      ),
+      userPrincipalName: readPath(context, "user", "userPrincipalName"),
+      licenseType: readPath(context, "user", "licenseType"),
+      tenantId: firstString(
+        readPath(context, "user", "tenant", "id"),
+        readPath(context, "user", "tid"),
+      ),
+      aadObjectId: readPath(context, "user", "aadObjectId"),
+    },
+    meeting: {
+      id: meetingId,
+      role: firstString(
+        readPath(context, "meeting", "role"),
+        readPath(context, "meeting", "userMeetingRole"),
+      ),
+    },
+    chat: {
+      id: chatId,
+    },
+    team: {
+      groupId: teamGroupId,
+      displayName: readPath(context, "team", "displayName"),
+    },
+    channel: {
+      id: channelId,
+      displayName: readPath(context, "channel", "displayName"),
+      hostTeamGroupId: firstString(
+        readPath(context, "hostTeamGroupId"),
+        readPath(context, "channel", "hostTeamGroupId"),
+      ),
+      hostTenantId: firstString(
+        readPath(context, "hostTenantId"),
+        readPath(context, "channel", "hostTenantId"),
+      ),
+    },
+  };
+}
+
+function detectTeamsUserCategory(snapshot: TeamsContextSnapshot): TeamsUserDetection {
+  const licenseType = snapshot.user.licenseType.toLowerCase();
+  const loginHint = snapshot.user.loginHint.toLowerCase();
+  const userPrincipalName = snapshot.user.userPrincipalName.toLowerCase();
+
+  if (
+    licenseType === "anonymous" ||
+    (!snapshot.user.aadObjectId &&
+      !snapshot.user.id &&
+      !snapshot.user.loginHint &&
+      !snapshot.user.userPrincipalName &&
+      snapshot.surface === "meeting")
+  ) {
+    return {
+      category: "anonymous",
+      reason:
+        "Teams reported an anonymous meeting participant through user.licenseType or blank user identifiers.",
+    };
+  }
+
+  if (licenseType === "guest" || loginHint.includes("#ext#") || userPrincipalName.includes("#ext#")) {
+    return {
+      category: "guest",
+      reason: "The Teams context includes guest markers in the user identity.",
+    };
+  }
+
+  if (
+    snapshot.channel.hostTenantId &&
+    snapshot.user.tenantId &&
+    snapshot.channel.hostTenantId !== snapshot.user.tenantId
+  ) {
+    return {
+      category: "external",
+      reason: "The current user tenant differs from the host tenant supplied by Teams.",
+    };
+  }
+
+  return {
+    category: "member",
+    reason: "No guest, anonymous, or cross-tenant indicators were present in the available Teams context.",
+  };
+}
+
+function getRenderDecision(
+  snapshot: TeamsContextSnapshot,
+  userDetection: TeamsUserDetection,
+): TeamsRenderDecision {
+  const normalizedFrameContext = snapshot.page.frameContext.toLowerCase();
+  const looksLikeMeetingSurface =
+    normalizedFrameContext.includes("meeting") ||
+    normalizedFrameContext === "sidepanel" ||
+    normalizedFrameContext === "meetingstage";
+  const limitations: string[] = [];
+
+  if (looksLikeMeetingSurface && !snapshot.meeting.id) {
+    limitations.push(
+      "Teams opened a meeting surface without a meeting identifier, so meeting-specific diagnostics are incomplete.",
+    );
+  }
+
+  if (
+    (snapshot.surface === "channel" || snapshot.surface === "team") &&
+    !snapshot.channel.id &&
+    !snapshot.team.groupId &&
+    !snapshot.channel.hostTeamGroupId
+  ) {
+    limitations.push(
+      "Teams loaded a channel or team surface without channel or team identifiers, so host-surface diagnostics are incomplete.",
+    );
+  }
+
+  if (snapshot.surface === "unknown") {
+    return {
+      allowed: true,
+      reason:
+        "Teams context is incomplete, but the page does not require member-only signals and can render in fallback mode.",
+      limitations: [
+        "Teams did not provide enough context to classify the session as meeting, team, channel, or group chat.",
+      ],
+    };
+  }
+
+  if (userDetection.category === "anonymous" && snapshot.surface !== "meeting") {
+    limitations.push(
+      "Anonymous users are only expected in Teams meeting surfaces; this context looks inconsistent.",
+    );
+  }
+
+  return {
+    allowed: true,
+    reason: `Rendering is allowed for ${userDetection.category} users on this ${snapshot.surface} surface because the page has no member-only Teams gating.`,
+    limitations,
+  };
+}
+
+function getTeamsNotice(
+  snapshot: TeamsContextSnapshot,
+  renderDecision: TeamsRenderDecision,
+  userDetection: TeamsUserDetection,
+): TeamsPageNotice | null {
+  if (
+    (userDetection.category === "external" || userDetection.category === "anonymous") &&
+    (snapshot.surface === "meeting" ||
+      snapshot.surface === "unknown" ||
+      renderDecision.limitations.length > 0)
+  ) {
+    return {
+      title: "Join as a Kent Business College guest",
+      message:
+        "This Teams session appears to be external or anonymous, so Teams may not expose the full QR panel experience. For reliable access, accept the Kent Business College guest invite, switch organization in Teams to Kent Business College, and join as a Guest after the organizer has added the app to the meeting.",
+      tone: "warning",
+    };
+  }
+
+  if (renderDecision.limitations.length > 0) {
+    return {
+      title: "Limited Teams context",
+      message: renderDecision.limitations.join(" "),
+      tone: "warning",
+    };
+  }
+
+  if (snapshot.surface === "groupChat" && userDetection.category === "guest") {
+    return {
+      title: "Guest group chat tab",
+      message:
+        "Guests can use tabs added by an internal user in group chats, but guests still cannot add or manage the app themselves.",
+      tone: "info",
+    };
+  }
+
+  return null;
+}
 
 export default function TeamsQrPanel() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -19,6 +329,7 @@ export default function TeamsQrPanel() {
   const [shareMode, setShareMode] = useState<ShareMode>("copy");
   const [shareBusy, setShareBusy] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
+  const [teamsNotice, setTeamsNotice] = useState<TeamsPageNotice | null>(null);
 
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
@@ -43,33 +354,59 @@ export default function TeamsQrPanel() {
           return;
         }
 
-        const inMeetingSurface =
-          context.meeting !== undefined &&
-          (context.page.frameContext === FrameContexts.sidePanel ||
-            context.page.frameContext === FrameContexts.meetingStage);
+        const snapshot = buildTeamsContextSnapshot(context);
+        const userDetection = detectTeamsUserCategory(snapshot);
+        const renderDecision = getRenderDecision(snapshot, userDetection);
+        const notice = getTeamsNotice(snapshot, renderDecision, userDetection);
 
-        if (inMeetingSurface) {
-          meeting.getAppContentStageSharingCapabilities((error, result) => {
-            if (disposed) {
-              return;
-            }
+        console.info(`${TEAMS_DEBUG_PREFIX} Teams SDK initialized.`);
+        console.info(`${TEAMS_DEBUG_PREFIX} Raw Teams context`, context);
+        console.info(`${TEAMS_DEBUG_PREFIX} Normalized Teams context`, snapshot);
+        console.info(`${TEAMS_DEBUG_PREFIX} Detected user category`, userDetection);
+        console.info(`${TEAMS_DEBUG_PREFIX} Detected host surface`, {
+          surface: snapshot.surface,
+          frameContext: snapshot.page.frameContext || "(missing)",
+        });
+        console.info(`${TEAMS_DEBUG_PREFIX} Teams load summary`, {
+          supportedContext: renderDecision.allowed,
+          userCategory: userDetection.category,
+          hostSurface: snapshot.surface,
+          limitations: renderDecision.limitations,
+          appearsGuestReady:
+            userDetection.category === "member" || userDetection.category === "guest",
+        });
+        console.info(`${TEAMS_DEBUG_PREFIX} Render decision`, renderDecision);
 
-            if (!error && result?.doesAppHaveSharePermission) {
-              setShareMode("stage");
-              return;
-            }
-
-            try {
-              setShareMode(sharing.isSupported() ? "link" : "copy");
-            } catch {
-              setShareMode("copy");
-            }
-          });
-          return;
+        if (snapshot.channel.hostTeamGroupId || snapshot.channel.hostTenantId) {
+          console.info(
+            `${TEAMS_DEBUG_PREFIX} Shared/private channel host metadata detected.`,
+            {
+              hostTeamGroupId: snapshot.channel.hostTeamGroupId || "(missing)",
+              hostTenantId: snapshot.channel.hostTenantId || "(missing)",
+            },
+          );
         }
 
+        if (notice) {
+          console.warn(`${TEAMS_DEBUG_PREFIX} Rendering with Teams fallback notice.`, {
+            reason: notice.title,
+            snapshot,
+          });
+        }
+
+        setTeamsNotice(notice);
         setShareMode(sharing.isSupported() ? "link" : "copy");
-      } catch {
+      } catch (error) {
+        console.warn(
+          `${TEAMS_DEBUG_PREFIX} Teams SDK initialization failed. Rendering browser-safe fallback.`,
+          error,
+        );
+        setTeamsNotice({
+          title: "Teams context unavailable",
+          message:
+            "The panel opened without a usable Teams context. Rendering stays enabled, but guest and host-surface detection is unavailable in this session.",
+          tone: "warning",
+        });
         setShareMode("copy");
       }
     }
@@ -101,24 +438,6 @@ export default function TeamsQrPanel() {
     setShareMessage("");
 
     try {
-      if (shareMode === "stage") {
-        await app.initialize();
-
-        await new Promise<void>((resolve, reject) => {
-          meeting.shareAppContentToStage((error, result) => {
-            if (error || !result) {
-              reject(new Error(error?.message || "Could not share panel to stage."));
-              return;
-            }
-
-            resolve();
-          }, PANEL_URL);
-        });
-
-        setShareMessage("Panel shared to the meeting stage.");
-        return;
-      }
-
       await app.initialize();
 
       if (shareMode === "link") {
@@ -127,26 +446,23 @@ export default function TeamsQrPanel() {
             content: [
               {
                 type: "URL",
-                url: PANEL_URL,
-                message: "Open the KBC Attendance panel in Teams.",
+                url: ATTENDANCE_URL,
+                message: "Open the KBC Attendance link.",
                 preview: true,
               },
             ],
           });
-        } else {
-          pages.shareDeepLink({
-            subPageId: SHARE_SUBPAGE_ID,
-            subPageLabel: "KBC Attendance",
-            subPageWebUrl: PANEL_URL,
-          });
+          setShareMessage("Share dialog opened with the attendance link.");
+          return;
         }
 
-        setShareMessage("Share dialog opened.");
+        await navigator.clipboard.writeText(ATTENDANCE_URL);
+        setShareMessage("Attendance link copied.");
         return;
       }
 
-      await navigator.clipboard.writeText(PANEL_URL);
-      setShareMessage("Panel link copied.");
+      await navigator.clipboard.writeText(ATTENDANCE_URL);
+      setShareMessage("Attendance link copied.");
     } catch (error) {
       console.error("Failed to share panel", error);
       setShareMessage("Could not share the panel.");
@@ -158,6 +474,17 @@ export default function TeamsQrPanel() {
   return (
     <div style={styles.page}>
       <div style={styles.content}>
+        {teamsNotice ? (
+          <div
+            style={
+              teamsNotice.tone === "warning" ? styles.noticeWarningCard : styles.noticeInfoCard
+            }
+          >
+            <h2 style={styles.noticeTitle}>{teamsNotice.title}</h2>
+            <p style={styles.noticeText}>{teamsNotice.message}</p>
+          </div>
+        ) : null}
+
         {!hasError && (
           <>
             <h1 style={styles.title}>
@@ -214,11 +541,7 @@ export default function TeamsQrPanel() {
           onClick={handleShare}
           disabled={shareBusy}
         >
-          {shareBusy
-            ? "Sharing..."
-            : shareMode === "stage"
-              ? "Share to stage"
-              : "Share"}
+          {shareBusy ? "Sharing..." : "Share"}
         </Button>
         {shareMessage ? <p style={styles.shareMessage}>{shareMessage}</p> : null}
       </div>
@@ -248,6 +571,37 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
     gap: 12,
+  },
+  noticeInfoCard: {
+    width: "100%",
+    borderRadius: 16,
+    padding: "14px 16px",
+    background: "rgba(15, 23, 42, 0.42)",
+    border: "1px solid rgba(191, 219, 254, 0.32)",
+    boxSizing: "border-box",
+    textAlign: "left",
+  },
+  noticeWarningCard: {
+    width: "100%",
+    borderRadius: 16,
+    padding: "14px 16px",
+    background: "rgba(127, 29, 29, 0.3)",
+    border: "1px solid rgba(252, 165, 165, 0.4)",
+    boxSizing: "border-box",
+    textAlign: "left",
+  },
+  noticeTitle: {
+    margin: 0,
+    color: "#f8fafc",
+    fontSize: 15,
+    fontWeight: 700,
+    lineHeight: 1.35,
+  },
+  noticeText: {
+    margin: "6px 0 0",
+    color: "#dbe4ff",
+    fontSize: 13,
+    lineHeight: 1.45,
   },
   title: {
     margin: 0,

@@ -1,11 +1,22 @@
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { app, pages } from "@microsoft/teams-js";
 
 const CONTENT_URL = "https://qrteams.kentbusinesscollege.net/teams/qr-panel";
 const DISPLAY_NAME = "KBC Attendance";
+const TAB_CONFIG = {
+  entityId: "qr-panel-static",
+  suggestedDisplayName: DISPLAY_NAME,
+  contentUrl: CONTENT_URL,
+  websiteUrl: CONTENT_URL,
+};
 
 export default function TeamsConfig() {
+  const [status, setStatus] = useState("Configuring tab...");
+  const [showManualSaveHint, setShowManualSaveHint] = useState(false);
+
   useEffect(() => {
+    let disposed = false;
+
     const initializeConfig = async () => {
       try {
         await app.initialize();
@@ -13,32 +24,53 @@ export default function TeamsConfig() {
 
         pages.config.registerOnSaveHandler(async (saveEvent) => {
           try {
-            await pages.config.setConfig({
-              entityId: "qr-panel-static",
-              suggestedDisplayName: DISPLAY_NAME,
-              contentUrl: CONTENT_URL,
-              websiteUrl: CONTENT_URL,
-            });
+            await pages.config.setConfig(TAB_CONFIG);
             saveEvent.notifySuccess();
           } catch (err) {
             console.error(err);
             saveEvent.notifyFailure("Failed");
           }
         });
+
         pages.config.setValidityState(true);
+
+        await pages.config.setConfig(TAB_CONFIG);
+        setStatus("Tab configured.");
+
+        try {
+          await app.notifySuccess();
+        } catch (notifyError) {
+          console.warn("Teams host did not auto-close settings view", notifyError);
+          if (!disposed) {
+            setShowManualSaveHint(true);
+            setStatus("Tab configured. If this screen stays open, click Save once.");
+          }
+        }
       } catch (err) {
         console.error("Teams SDK initialization failed", err);
+        if (!disposed) {
+          setStatus("Could not configure the tab automatically.");
+          setShowManualSaveHint(true);
+        }
       }
     };
 
     void initializeConfig();
+
+    return () => {
+      disposed = true;
+    };
   }, []);
 
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h1 style={styles.title}>Open attendance panel</h1>
-        <p style={styles.status}>Select Save to continue</p>
+        <div style={styles.spinner} aria-hidden />
+        <h1 style={styles.title}>Preparing KBC Attendance</h1>
+        <p style={styles.status}>{status}</p>
+        {showManualSaveHint ? (
+          <p style={styles.hint}>Teams may still require one final Save in channel-tab setup.</p>
+        ) : null}
       </div>
     </div>
   );
@@ -67,6 +99,14 @@ const styles: Record<string, CSSProperties> = {
     boxSizing: "border-box",
     textAlign: "center",
   },
+  spinner: {
+    width: 36,
+    height: 36,
+    margin: "0 auto 18px",
+    borderRadius: "50%",
+    border: "3px solid rgba(203, 213, 225, 0.25)",
+    borderTopColor: "#8b5cf6",
+  },
   title: {
     margin: 0,
     fontSize: 24,
@@ -79,5 +119,11 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 14,
     lineHeight: 1.4,
     color: "#cbd5e1",
+  },
+  hint: {
+    margin: "12px 0 0",
+    fontSize: 12,
+    lineHeight: 1.4,
+    color: "#94a3b8",
   },
 };

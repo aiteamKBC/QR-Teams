@@ -1,8 +1,8 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "2.0.22",
-  "id": "4f3868b0-34ed-4a23-a940-8a38c4a2c4cf",
+  "version": "2.0.26",
+  "id": "5d1360ac-b336-4cd5-8db5-440296b1f366",
   "name": {
     "short": "KBC Attendance",
     "full": "KBC Attendance Panel"
@@ -22,22 +22,31 @@
     "color": "color.png"
   },
   "accentColor": "#4F46E5",
-  "configurableTabs": [
+  "staticTabs": [
     {
-      "configurationUrl": "https://qrteams.kentbusinesscollege.net/teams/config",
-      "canUpdateConfiguration": false,
+      "entityId": "qr-panel-static",
+      "name": "QR Panel",
+      "contentUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
+      "websiteUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
       "scopes": [
         "team",
         "groupChat"
       ],
       "context": [
         "channelTab",
+        "privateChatTab",
         "meetingChatTab",
         "meetingDetailsTab",
-        "meetingSidePanel",
-        "meetingStage"
+        "meetingSidePanel"
       ]
     }
+  ],
+  "meetingExtensionDefinition": {
+    "supportsAnonymousGuestUsers": true
+  },
+  "supportedChannelTypes": [
+    "sharedChannels",
+    "privateChannels"
   ],
   "validDomains": [
     "qrteams.kentbusinesscollege.net"
