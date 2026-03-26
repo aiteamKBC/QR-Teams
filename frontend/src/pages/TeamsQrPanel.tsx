@@ -7,14 +7,8 @@ const STUDENT_UI_IMAGE_SRC = "/assets/attendance-student-ui.png";
 const ATTENDANCE_URL = "https://attendance.kentbusinesscollege.net/";
 
 type ShareMode = "link" | "copy";
-type NoticeTone = "info" | "warning";
 type TeamsUserCategory = "member" | "guest" | "anonymous" | "external";
 type TeamsHostSurface = "meeting" | "channel" | "team" | "groupChat" | "unknown";
-type TeamsPageNotice = {
-  title: string;
-  message: string;
-  tone: NoticeTone;
-};
 type TeamsContextSnapshot = {
   surface: TeamsHostSurface;
   host: {
@@ -283,45 +277,6 @@ function getRenderDecision(
   };
 }
 
-function getTeamsNotice(
-  snapshot: TeamsContextSnapshot,
-  renderDecision: TeamsRenderDecision,
-  userDetection: TeamsUserDetection,
-): TeamsPageNotice | null {
-  if (
-    (userDetection.category === "external" || userDetection.category === "anonymous") &&
-    (snapshot.surface === "meeting" ||
-      snapshot.surface === "unknown" ||
-      renderDecision.limitations.length > 0)
-  ) {
-    return {
-      title: "Join as a Kent Business College guest",
-      message:
-        "This Teams session appears to be external or anonymous, so Teams may not expose the full QR panel experience. For reliable access, accept the Kent Business College guest invite, switch organization in Teams to Kent Business College, and join as a Guest after the organizer has added the app to the meeting.",
-      tone: "warning",
-    };
-  }
-
-  if (renderDecision.limitations.length > 0) {
-    return {
-      title: "Limited Teams context",
-      message: renderDecision.limitations.join(" "),
-      tone: "warning",
-    };
-  }
-
-  if (snapshot.surface === "groupChat" && userDetection.category === "guest") {
-    return {
-      title: "Guest group chat tab",
-      message:
-        "Guests can use tabs added by an internal user in group chats, but guests still cannot add or manage the app themselves.",
-      tone: "info",
-    };
-  }
-
-  return null;
-}
-
 export default function TeamsQrPanel() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -329,7 +284,6 @@ export default function TeamsQrPanel() {
   const [shareMode, setShareMode] = useState<ShareMode>("copy");
   const [shareBusy, setShareBusy] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
-  const [teamsNotice, setTeamsNotice] = useState<TeamsPageNotice | null>(null);
 
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
@@ -357,7 +311,6 @@ export default function TeamsQrPanel() {
         const snapshot = buildTeamsContextSnapshot(context);
         const userDetection = detectTeamsUserCategory(snapshot);
         const renderDecision = getRenderDecision(snapshot, userDetection);
-        const notice = getTeamsNotice(snapshot, renderDecision, userDetection);
 
         console.info(`${TEAMS_DEBUG_PREFIX} Teams SDK initialized.`);
         console.info(`${TEAMS_DEBUG_PREFIX} Raw Teams context`, context);
@@ -387,26 +340,12 @@ export default function TeamsQrPanel() {
           );
         }
 
-        if (notice) {
-          console.warn(`${TEAMS_DEBUG_PREFIX} Rendering with Teams fallback notice.`, {
-            reason: notice.title,
-            snapshot,
-          });
-        }
-
-        setTeamsNotice(notice);
         setShareMode(sharing.isSupported() ? "link" : "copy");
       } catch (error) {
         console.warn(
           `${TEAMS_DEBUG_PREFIX} Teams SDK initialization failed. Rendering browser-safe fallback.`,
           error,
         );
-        setTeamsNotice({
-          title: "Teams context unavailable",
-          message:
-            "The panel opened without a usable Teams context. Rendering stays enabled, but guest and host-surface detection is unavailable in this session.",
-          tone: "warning",
-        });
         setShareMode("copy");
       }
     }
@@ -474,17 +413,6 @@ export default function TeamsQrPanel() {
   return (
     <div style={styles.page}>
       <div style={styles.content}>
-        {teamsNotice ? (
-          <div
-            style={
-              teamsNotice.tone === "warning" ? styles.noticeWarningCard : styles.noticeInfoCard
-            }
-          >
-            <h2 style={styles.noticeTitle}>{teamsNotice.title}</h2>
-            <p style={styles.noticeText}>{teamsNotice.message}</p>
-          </div>
-        ) : null}
-
         {!hasError && (
           <>
             <h1 style={styles.title}>
@@ -571,37 +499,6 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
     gap: 12,
-  },
-  noticeInfoCard: {
-    width: "100%",
-    borderRadius: 16,
-    padding: "14px 16px",
-    background: "rgba(15, 23, 42, 0.42)",
-    border: "1px solid rgba(191, 219, 254, 0.32)",
-    boxSizing: "border-box",
-    textAlign: "left",
-  },
-  noticeWarningCard: {
-    width: "100%",
-    borderRadius: 16,
-    padding: "14px 16px",
-    background: "rgba(127, 29, 29, 0.3)",
-    border: "1px solid rgba(252, 165, 165, 0.4)",
-    boxSizing: "border-box",
-    textAlign: "left",
-  },
-  noticeTitle: {
-    margin: 0,
-    color: "#f8fafc",
-    fontSize: 15,
-    fontWeight: 700,
-    lineHeight: 1.35,
-  },
-  noticeText: {
-    margin: "6px 0 0",
-    color: "#dbe4ff",
-    fontSize: 13,
-    lineHeight: 1.45,
   },
   title: {
     margin: 0,
