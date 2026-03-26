@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { app, sharing } from "@microsoft/teams-js";
+import { app } from "@microsoft/teams-js";
 import { Button } from "@fluentui/react-components";
 import { ShareRegular } from "@fluentui/react-icons";
 
 const STUDENT_UI_IMAGE_SRC = "/assets/attendance-student-ui.png";
 const ATTENDANCE_URL = "https://attendance.kentbusinesscollege.net/";
 
-type ShareMode = "link" | "copy";
 type TeamsUserCategory = "member" | "guest" | "anonymous" | "external";
 type TeamsHostSurface = "meeting" | "channel" | "team" | "groupChat" | "unknown";
 type TeamsContextSnapshot = {
@@ -281,7 +280,6 @@ export default function TeamsQrPanel() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [shareMode, setShareMode] = useState<ShareMode>("copy");
   const [shareBusy, setShareBusy] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
 
@@ -340,13 +338,11 @@ export default function TeamsQrPanel() {
           );
         }
 
-        setShareMode(sharing.isSupported() ? "link" : "copy");
       } catch (error) {
         console.warn(
           `${TEAMS_DEBUG_PREFIX} Teams SDK initialization failed. Rendering browser-safe fallback.`,
           error,
         );
-        setShareMode("copy");
       }
     }
 
@@ -377,34 +373,11 @@ export default function TeamsQrPanel() {
     setShareMessage("");
 
     try {
-      await app.initialize();
-
-      if (shareMode === "link") {
-        if (sharing.isSupported()) {
-          await sharing.shareWebContent({
-            content: [
-              {
-                type: "URL",
-                url: ATTENDANCE_URL,
-                message: "Open the KBC Attendance link.",
-                preview: true,
-              },
-            ],
-          });
-          setShareMessage("Share dialog opened with the attendance link.");
-          return;
-        }
-
-        await navigator.clipboard.writeText(ATTENDANCE_URL);
-        setShareMessage("Attendance link copied.");
-        return;
-      }
-
       await navigator.clipboard.writeText(ATTENDANCE_URL);
-      setShareMessage("Attendance link copied.");
+      setShareMessage("Attendance link copied. Paste it in Teams chat.");
     } catch (error) {
-      console.error("Failed to share panel", error);
-      setShareMessage("Could not share the panel.");
+      console.error("Failed to copy attendance link", error);
+      setShareMessage("Could not copy the attendance link.");
     } finally {
       setShareBusy(false);
     }
@@ -469,7 +442,7 @@ export default function TeamsQrPanel() {
           onClick={handleShare}
           disabled={shareBusy}
         >
-          {shareBusy ? "Sharing..." : "Share"}
+          {shareBusy ? "Copying..." : "Copy attendance link"}
         </Button>
         {shareMessage ? <p style={styles.shareMessage}>{shareMessage}</p> : null}
       </div>
