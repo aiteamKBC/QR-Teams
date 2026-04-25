@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { app, meeting } from "@microsoft/teams-js";
-import { Button } from "@fluentui/react-components";
-import { LinkRegular, ShareRegular } from "@fluentui/react-icons";
+import { LinkRegular } from "@fluentui/react-icons";
 
 const STUDENT_UI_IMAGE_SRC = "/assets/attendance-student-ui.png";
 const ATTENDANCE_URL = "https://attendance.kentbusinesscollege.net/";
@@ -10,43 +9,24 @@ function getPanelUrl() {
   return new URL("/teams/qr-panel", window.location.origin).toString();
 }
 
-function getShareSupportMessage(frameContext: string, hasPermission: boolean) {
+function getShareSupportMessage(frameContext: string, hasPermission: boolean, isStageShared: boolean) {
   if (!frameContext) {
-    return "Open this page inside a Teams meeting to share it to the meeting stage.";
+    return "Open this page inside a Teams meeting to use the native Teams Share button.";
   }
 
   if (frameContext === "meetingstage") {
-    return "This panel is already open on the meeting stage.";
+    return "Attendance is already open on the meeting stage.";
+  }
+
+  if (isStageShared) {
+    return "Attendance is already being shared to the meeting stage.";
   }
 
   if (!hasPermission) {
-    return "Sharing to the meeting stage is not available for this participant in the current meeting.";
+    return "The Teams Share button appears for eligible meeting roles when meeting stage sharing is available.";
   }
 
-  return "";
-}
-
-function getShareStatusMessage(isStageShared: boolean) {
-  if (isStageShared) {
-    return "This panel is already being shared to the meeting stage.";
-  }
-
-  return "";
-}
-
-function readShareError(error: unknown) {
-  if (error && typeof error === "object") {
-    const maybeError = error as { message?: string; errorCode?: string | number };
-    if (typeof maybeError.message === "string" && maybeError.message.trim()) {
-      return maybeError.message.trim();
-    }
-
-    if (maybeError.errorCode) {
-      return `Teams returned error ${String(maybeError.errorCode)}.`;
-    }
-  }
-
-  return "Teams could not share this panel to the meeting stage.";
+  return "Use the native Teams Share button below this panel to present Attendance on the meeting stage.";
 }
 
 function getStageShareCapabilities() {
@@ -87,44 +67,14 @@ function getStageSharingState() {
   });
 }
 
-function sharePanelToStage(panelUrl: string) {
-  return new Promise<void>((resolve, reject) => {
-    meeting.shareAppContentToStage(
-      (error, result) => {
-        if (error || !result) {
-          reject(error ?? new Error("Share to stage was not completed."));
-          return;
-        }
-
-        resolve();
-      },
-      panelUrl,
-    );
-  });
-}
-
-function stopSharingPanelFromStage() {
-  return new Promise<void>((resolve, reject) => {
-    meeting.stopSharingAppContentToStage((error, result) => {
-      if (error || !result) {
-        reject(error ?? new Error("Stop sharing was not completed."));
-        return;
-      }
-
-      resolve();
-    });
-  });
-}
-
 export default function TeamsQrPanel() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [frameContext, setFrameContext] = useState("");
-  const [shareAllowed, setShareAllowed] = useState(false);
   const [isStageShared, setIsStageShared] = useState(false);
-  const [shareBusy, setShareBusy] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
+  const [shareReady, setShareReady] = useState(false);
 
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
@@ -157,16 +107,16 @@ export default function TeamsQrPanel() {
           currentFrameContext === "meetingsidepanel";
 
         if (currentFrameContext === "meetingstage") {
-          setShareAllowed(false);
           setIsStageShared(true);
-          setShareMessage(getShareSupportMessage(currentFrameContext, true));
+          setShareReady(false);
+          setShareMessage(getShareSupportMessage(currentFrameContext, true, true));
           return;
         }
 
         if (!canShare) {
-          setShareAllowed(false);
+          setShareReady(false);
           setIsStageShared(false);
-          setShareMessage(getShareSupportMessage(currentFrameContext, false));
+          setShareMessage(getShareSupportMessage(currentFrameContext, false, false));
           return;
         }
 
@@ -178,19 +128,15 @@ export default function TeamsQrPanel() {
           return;
         }
 
-        setShareAllowed(hasPermission);
+        setShareReady(hasPermission);
         setIsStageShared(sharingState);
-        setShareMessage(
-          hasPermission
-            ? getShareStatusMessage(sharingState)
-            : getShareSupportMessage(currentFrameContext, hasPermission),
-        );
+        setShareMessage(getShareSupportMessage(currentFrameContext, hasPermission, sharingState));
       } catch (error) {
         console.warn("[KBC Attendance][TeamsQrPanel] Teams SDK initialization failed.", error);
         if (!disposed) {
-          setShareAllowed(false);
+          setShareReady(false);
           setIsStageShared(false);
-          setShareMessage("Open this page inside a Teams meeting to share it to the meeting stage.");
+          setShareMessage("Open this page inside a Teams meeting to use the native Teams Share button.");
         }
       }
     }
@@ -211,58 +157,13 @@ export default function TeamsQrPanel() {
     setRetryCount((value) => value + 1);
   };
 
-  const refreshSharingState = async () => {
-    const sharingState = await getStageSharingState();
-    setIsStageShared(sharingState);
-    return sharingState;
-  };
-
-  const handleShare = async () => {
-    if (shareBusy || !shareAllowed) {
-      return;
-    }
-
-    setShareBusy(true);
-    setShareMessage("");
-
-    try {
-      if (isStageShared) {
-        await stopSharingPanelFromStage();
-        const sharingState = await refreshSharingState();
-        setShareMessage(
-          sharingState
-            ? "Teams kept this panel on the meeting stage."
-            : "This panel is no longer being shared to the meeting stage.",
-        );
-      } else {
-        await sharePanelToStage(panelUrl);
-        const sharingState = await refreshSharingState();
-        setShareMessage(
-          sharingState
-            ? "This panel is now being shared to the meeting stage."
-            : "Teams accepted the share request. If the stage does not change, use the meeting side panel Share action once.",
-        );
-      }
-    } catch (error) {
-      console.error("[KBC Attendance][TeamsQrPanel] Share to stage action failed.", error);
-      const sharingState = await refreshSharingState();
-      setShareMessage(
-        sharingState && !isStageShared
-          ? "This panel is already being shared to the meeting stage."
-          : readShareError(error),
-      );
-    } finally {
-      setShareBusy(false);
-    }
-  };
-
   return (
     <div style={styles.page}>
       <div style={styles.content}>
         <div style={styles.headerBlock}>
           <p style={styles.eyebrow}>QR Teams</p>
           <h1 style={styles.title}>Attendance</h1>
-          <p style={styles.subtitle}>Scan the code, open the attendance link, or share this panel to the meeting stage.</p>
+          <p style={styles.subtitle}>Scan the code, open the attendance link, and use the native Teams Share control when you want this panel on stage.</p>
         </div>
 
         <div style={styles.qrCard}>
@@ -299,25 +200,25 @@ export default function TeamsQrPanel() {
         </div>
 
         <div style={styles.infoCard}>
+          <div style={shareReady ? styles.shareHintCard : styles.shareHintCardMuted}>
+            <p style={styles.shareHintLabel}>Meeting stage</p>
+            <p style={styles.shareHintTitle}>
+              {isStageShared ? "Already shared in this meeting" : "Share from the Teams meeting controls"}
+            </p>
+            <p style={styles.shareHintBody}>{shareMessage}</p>
+          </div>
+
           <p style={styles.sectionLabel}>Attendance link</p>
           <a href={ATTENDANCE_URL} target="_blank" rel="noreferrer" style={styles.attendanceLink}>
             <LinkRegular />
             <span>{ATTENDANCE_URL}</span>
           </a>
-
-          <Button
-            appearance="primary"
-            icon={<ShareRegular />}
-            size="large"
-            shape="rounded"
-            style={shareAllowed && !shareBusy ? styles.shareButton : styles.shareButtonDisabled}
-            onClick={handleShare}
-            disabled={!shareAllowed || shareBusy}
-          >
-            {shareBusy ? (isStageShared ? "Stopping..." : "Sharing...") : isStageShared ? "Stop sharing" : "Share to stage"}
-          </Button>
-
-          {shareMessage ? <p style={styles.shareMessage}>{shareMessage}</p> : null}
+          <div style={styles.metaRow}>
+            <p style={styles.panelUrlLabel}>Panel URL</p>
+            <a href={panelUrl} target="_blank" rel="noreferrer" style={styles.panelUrlLink}>
+              {panelUrl}
+            </a>
+          </div>
           {frameContext ? <p style={styles.frameContext}>Teams surface: {frameContext}</p> : null}
         </div>
       </div>
@@ -461,6 +362,45 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: 14,
   },
+  shareHintCard: {
+    borderRadius: 18,
+    padding: 16,
+    background: "linear-gradient(135deg, rgba(79, 70, 229, 0.22), rgba(37, 99, 235, 0.18))",
+    border: "1px solid rgba(129, 140, 248, 0.38)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  },
+  shareHintCardMuted: {
+    borderRadius: 18,
+    padding: 16,
+    background: "rgba(30, 41, 59, 0.72)",
+    border: "1px solid rgba(100, 116, 139, 0.28)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  },
+  shareHintLabel: {
+    margin: 0,
+    color: "#c7d2fe",
+    fontSize: 12,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+  },
+  shareHintTitle: {
+    margin: 0,
+    color: "#f8fafc",
+    fontSize: 18,
+    fontWeight: 700,
+    lineHeight: 1.3,
+  },
+  shareHintBody: {
+    margin: 0,
+    color: "#dbeafe",
+    fontSize: 13,
+    lineHeight: 1.55,
+  },
   sectionLabel: {
     margin: 0,
     color: "#c7d2fe",
@@ -479,23 +419,25 @@ const styles: Record<string, CSSProperties> = {
     textDecoration: "underline",
     wordBreak: "break-all",
   },
-  shareButton: {
-    width: "100%",
-    minHeight: 48,
-    background: "linear-gradient(135deg, #4f46e5, #2563eb)",
-    color: "#ffffff",
+  metaRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
   },
-  shareButtonDisabled: {
-    width: "100%",
-    minHeight: 48,
-    background: "rgba(71, 85, 105, 0.42)",
-    color: "#cbd5e1",
-  },
-  shareMessage: {
+  panelUrlLabel: {
     margin: 0,
-    color: "#cbd5e1",
-    fontSize: 13,
+    color: "#94a3b8",
+    fontSize: 12,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+  },
+  panelUrlLink: {
+    color: "#bfdbfe",
+    fontSize: 12,
     lineHeight: 1.5,
+    textDecoration: "underline",
+    wordBreak: "break-all",
   },
   frameContext: {
     margin: 0,

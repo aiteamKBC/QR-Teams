@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "2.0.29",
+  "version": "2.0.31",
   "id": "5d1360ac-b336-4cd5-8db5-440296b1f366",
   "name": {
     "short": "KBC Attendance",
@@ -22,6 +22,10 @@
     "color": "color.png"
   },
   "accentColor": "#4F46E5",
+  "defaultInstallScope": "meetings",
+  "defaultGroupCapability": {
+    "meetings": "tab"
+  },
   "staticTabs": [
     {
       "entityId": "qr-panel-static",
@@ -56,7 +60,6 @@
     }
   },
   "meetingExtensionDefinition": {
-    "supportsCustomShareToStage": true,
     "supportsAnonymousGuestUsers": true
   },
   "supportedChannelTypes": [
