@@ -1,80 +1,15 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { app, meeting } from "@microsoft/teams-js";
 import { LinkRegular } from "@fluentui/react-icons";
+import { app } from "@microsoft/teams-js";
 
 const STUDENT_UI_IMAGE_SRC = "/assets/attendance-student-ui.png";
 const ATTENDANCE_URL = "https://attendance.kentbusinesscollege.net/";
-
-function getPanelUrl() {
-  return new URL("/teams/qr-panel", window.location.origin).toString();
-}
-
-function getShareSupportMessage(frameContext: string, hasPermission: boolean, isStageShared: boolean) {
-  if (!frameContext) {
-    return "Open this page inside a Teams meeting to use the native Teams Share button.";
-  }
-
-  if (frameContext === "meetingstage") {
-    return "Attendance is already open on the meeting stage.";
-  }
-
-  if (isStageShared) {
-    return "Attendance is already being shared to the meeting stage.";
-  }
-
-  if (!hasPermission) {
-    return "The Teams Share button appears for eligible meeting roles when meeting stage sharing is available.";
-  }
-
-  return "Use the native Teams Share button below this panel to present Attendance on the meeting stage.";
-}
-
-function getStageShareCapabilities() {
-  return new Promise<boolean>((resolve) => {
-    try {
-      meeting.getAppContentStageSharingCapabilities((error, capabilities) => {
-        if (error) {
-          console.warn("[KBC Attendance][TeamsQrPanel] Could not read share capabilities.", error);
-          resolve(false);
-          return;
-        }
-
-        resolve(Boolean(capabilities?.doesAppHaveSharePermission));
-      });
-    } catch (error) {
-      console.warn("[KBC Attendance][TeamsQrPanel] Share capabilities are unavailable.", error);
-      resolve(false);
-    }
-  });
-}
-
-function getStageSharingState() {
-  return new Promise<boolean>((resolve) => {
-    try {
-      meeting.getAppContentStageSharingState((error, state) => {
-        if (error) {
-          console.warn("[KBC Attendance][TeamsQrPanel] Could not read stage sharing state.", error);
-          resolve(false);
-          return;
-        }
-
-        resolve(Boolean(state?.isAppSharing));
-      });
-    } catch (error) {
-      console.warn("[KBC Attendance][TeamsQrPanel] Stage sharing state is unavailable.", error);
-      resolve(false);
-    }
-  });
-}
 
 export default function TeamsQrPanel() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [frameContext, setFrameContext] = useState("");
-  const [isStageShared, setIsStageShared] = useState(false);
-  const [shareMessage, setShareMessage] = useState("");
-  const [shareReady, setShareReady] = useState(false);
 
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
@@ -99,45 +34,9 @@ export default function TeamsQrPanel() {
           return;
         }
 
-        const currentFrameContext = context.page.frameContext?.toLowerCase() ?? "";
-        setFrameContext(currentFrameContext);
-
-        const canShare =
-          currentFrameContext === "sidepanel" ||
-          currentFrameContext === "meetingsidepanel";
-
-        if (currentFrameContext === "meetingstage") {
-          setIsStageShared(true);
-          setShareReady(false);
-          setShareMessage(getShareSupportMessage(currentFrameContext, true, true));
-          return;
-        }
-
-        if (!canShare) {
-          setShareReady(false);
-          setIsStageShared(false);
-          setShareMessage(getShareSupportMessage(currentFrameContext, false, false));
-          return;
-        }
-
-        const [hasPermission, sharingState] = await Promise.all([
-          getStageShareCapabilities(),
-          getStageSharingState(),
-        ]);
-        if (disposed) {
-          return;
-        }
-
-        setShareReady(hasPermission);
-        setIsStageShared(sharingState);
-        setShareMessage(getShareSupportMessage(currentFrameContext, hasPermission, sharingState));
+        setFrameContext(context.page.frameContext?.toLowerCase() ?? "");
       } catch (error) {
         console.warn("[KBC Attendance][TeamsQrPanel] Teams SDK initialization failed.", error);
-        if (!disposed) {
-          setShareReady(false);
-          setIsStageShared(false);
-          setShareMessage("Open this page inside a Teams meeting to use the native Teams Share button.");
-        }
       }
     }
 
@@ -149,8 +48,6 @@ export default function TeamsQrPanel() {
   }, []);
 
   const imageSrc = useMemo(() => `${STUDENT_UI_IMAGE_SRC}?r=${retryCount}`, [retryCount]);
-  const panelUrl = useMemo(() => getPanelUrl(), []);
-
   const retryLoad = () => {
     setHasError(false);
     setIsLoaded(false);
@@ -200,23 +97,11 @@ export default function TeamsQrPanel() {
         </div>
 
         <div style={styles.infoCard}>
-          <div style={shareReady ? styles.shareHintCard : styles.shareHintCardMuted}>
-            <p style={styles.shareHintLabel}>Meeting stage</p>
-            <p style={styles.shareHintTitle}>
-              {isStageShared ? "Already shared in this meeting" : "Share from the Teams meeting controls"}
-            </p>
-            <p style={styles.shareHintBody}>{shareMessage}</p>
-          </div>
-
-          <p style={styles.sectionLabel}>Attendance link</p>
-          <a href={ATTENDANCE_URL} target="_blank" rel="noreferrer" style={styles.attendanceLink}>
-            <LinkRegular />
-            <span>{ATTENDANCE_URL}</span>
-          </a>
-          <div style={styles.metaRow}>
-            <p style={styles.panelUrlLabel}>Panel URL</p>
-            <a href={panelUrl} target="_blank" rel="noreferrer" style={styles.panelUrlLink}>
-              {panelUrl}
+          <div style={styles.linkBlock}>
+            <p style={styles.linkTitle}>Open Attendence Link:</p>
+            <a href={ATTENDANCE_URL} target="_blank" rel="noreferrer" style={styles.attendanceLink}>
+              <LinkRegular />
+              <span>{ATTENDANCE_URL}</span>
             </a>
           </div>
           {frameContext ? <p style={styles.frameContext}>Teams surface: {frameContext}</p> : null}
@@ -362,82 +247,31 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: 14,
   },
-  shareHintCard: {
-    borderRadius: 18,
-    padding: 16,
-    background: "linear-gradient(135deg, rgba(79, 70, 229, 0.22), rgba(37, 99, 235, 0.18))",
-    border: "1px solid rgba(129, 140, 248, 0.38)",
+  linkBlock: {
     display: "flex",
     flexDirection: "column",
-    gap: 6,
+    gap: 8,
+    alignItems: "center",
+    textAlign: "center",
   },
-  shareHintCardMuted: {
-    borderRadius: 18,
-    padding: 16,
-    background: "rgba(30, 41, 59, 0.72)",
-    border: "1px solid rgba(100, 116, 139, 0.28)",
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-  },
-  shareHintLabel: {
-    margin: 0,
-    color: "#c7d2fe",
-    fontSize: 12,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-  },
-  shareHintTitle: {
+  linkTitle: {
     margin: 0,
     color: "#f8fafc",
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 700,
-    lineHeight: 1.3,
-  },
-  shareHintBody: {
-    margin: 0,
-    color: "#dbeafe",
-    fontSize: 13,
-    lineHeight: 1.55,
-  },
-  sectionLabel: {
-    margin: 0,
-    color: "#c7d2fe",
-    fontSize: 13,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
+    lineHeight: 1.4,
   },
   attendanceLink: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: 10,
     color: "#e0e7ff",
     fontSize: 14,
     lineHeight: 1.5,
     textDecoration: "underline",
     wordBreak: "break-all",
-  },
-  metaRow: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-  },
-  panelUrlLabel: {
-    margin: 0,
-    color: "#94a3b8",
-    fontSize: 12,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-  },
-  panelUrlLink: {
-    color: "#bfdbfe",
-    fontSize: 12,
-    lineHeight: 1.5,
-    textDecoration: "underline",
-    wordBreak: "break-all",
+    textAlign: "center",
   },
   frameContext: {
     margin: 0,
