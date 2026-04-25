@@ -5,6 +5,7 @@ import uuid
 
 class TeamsMeeting(models.Model):
     teams_meeting_id = models.CharField(max_length=255, unique=True)
+    chat_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     subject = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

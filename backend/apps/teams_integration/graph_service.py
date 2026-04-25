@@ -105,13 +105,22 @@ class TeamsGraphMeetingInstaller:
         """
         Resolve a meeting chat-id from a meeting identifier.
 
-        TODO: Implement tenant-specific logic. Common options:
-        - Persist meeting chat-id when webhook receives Teams event payload.
-        - Resolve by online meeting metadata via Graph if available in your flow.
+        Uses the locally stored meeting->chat mapping when available.
         """
-        raise NotImplementedError(
-            "resolve_meeting_chat_id is a scaffold. Implement meeting->chat mapping."
+        from .models import TeamsMeeting
+
+        meeting = (
+            TeamsMeeting.objects.filter(teams_meeting_id=online_meeting_id)
+            .only("chat_id")
+            .first()
         )
+        if not meeting or not meeting.chat_id:
+            raise GraphServiceError(
+                "No chat_id is stored for this meeting yet. "
+                "Send chat_id in the webhook payload or persist the mapping before auto-install."
+            )
+
+        return meeting.chat_id
 
     def install_app_to_chat(self, *, chat_id: str) -> dict:
         """

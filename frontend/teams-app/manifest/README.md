@@ -9,7 +9,7 @@ Current frontend ngrok URL:
 - `validDomains`: `["gastroenteritic-semisolemnly-kelly.ngrok-free.dev"]`
 - `staticTabs`: handles meeting surfaces without a Save/config page
 - `configurableTabs`: handles `team` channel tabs only
-- `context`: includes `channelTab`, `meetingSidePanel`, `meetingChatTab`, `meetingDetailsTab`, `meetingStage`
+- `context`: includes `meetingSidePanel`, `meetingChatTab`, `meetingDetailsTab`, `meetingStage`
 - `manifest.json` can omit meeting-stage `resourceSpecific` permissions if you want the app to install without the extra consent prompt; in that mode, share flow falls back to link/deep-link instead of stage sharing
 - `activities.activityTypes`: includes `attendanceReady` for activity feed notification template
 

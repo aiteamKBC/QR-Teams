@@ -20,7 +20,15 @@ function getShareSupportMessage(frameContext: string, hasPermission: boolean) {
   }
 
   if (!hasPermission) {
-    return "This Teams app package does not currently have meeting stage share permission.";
+    return "Sharing to the meeting stage is not available for this participant in the current meeting.";
+  }
+
+  return "";
+}
+
+function getShareStatusMessage(isStageShared: boolean) {
+  if (isStageShared) {
+    return "This panel is already being shared to the meeting stage.";
   }
 
   return "";
@@ -60,6 +68,25 @@ function getStageShareCapabilities() {
   });
 }
 
+function getStageSharingState() {
+  return new Promise<boolean>((resolve) => {
+    try {
+      meeting.getAppContentStageSharingState((error, state) => {
+        if (error) {
+          console.warn("[KBC Attendance][TeamsQrPanel] Could not read stage sharing state.", error);
+          resolve(false);
+          return;
+        }
+
+        resolve(Boolean(state?.isAppSharing));
+      });
+    } catch (error) {
+      console.warn("[KBC Attendance][TeamsQrPanel] Stage sharing state is unavailable.", error);
+      resolve(false);
+    }
+  });
+}
+
 function sharePanelToStage(panelUrl: string) {
   return new Promise<void>((resolve, reject) => {
     meeting.shareAppContentToStage(
@@ -72,8 +99,20 @@ function sharePanelToStage(panelUrl: string) {
         resolve();
       },
       panelUrl,
-      { sharingProtocol: meeting.SharingProtocol.ScreenShare },
     );
+  });
+}
+
+function stopSharingPanelFromStage() {
+  return new Promise<void>((resolve, reject) => {
+    meeting.stopSharingAppContentToStage((error, result) => {
+      if (error || !result) {
+        reject(error ?? new Error("Stop sharing was not completed."));
+        return;
+      }
+
+      resolve();
+    });
   });
 }
 
@@ -83,6 +122,7 @@ export default function TeamsQrPanel() {
   const [retryCount, setRetryCount] = useState(0);
   const [frameContext, setFrameContext] = useState("");
   const [shareAllowed, setShareAllowed] = useState(false);
+  const [isStageShared, setIsStageShared] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
 
@@ -114,26 +154,42 @@ export default function TeamsQrPanel() {
 
         const canShare =
           currentFrameContext === "sidepanel" ||
-          currentFrameContext === "meetingsidepanel" ||
-          currentFrameContext === "meetingstage";
+          currentFrameContext === "meetingsidepanel";
+
+        if (currentFrameContext === "meetingstage") {
+          setShareAllowed(false);
+          setIsStageShared(true);
+          setShareMessage(getShareSupportMessage(currentFrameContext, true));
+          return;
+        }
 
         if (!canShare) {
           setShareAllowed(false);
+          setIsStageShared(false);
           setShareMessage(getShareSupportMessage(currentFrameContext, false));
           return;
         }
 
-        const hasPermission = await getStageShareCapabilities();
+        const [hasPermission, sharingState] = await Promise.all([
+          getStageShareCapabilities(),
+          getStageSharingState(),
+        ]);
         if (disposed) {
           return;
         }
 
-        setShareAllowed(hasPermission && currentFrameContext !== "meetingstage");
-        setShareMessage(getShareSupportMessage(currentFrameContext, hasPermission));
+        setShareAllowed(hasPermission);
+        setIsStageShared(sharingState);
+        setShareMessage(
+          hasPermission
+            ? getShareStatusMessage(sharingState)
+            : getShareSupportMessage(currentFrameContext, hasPermission),
+        );
       } catch (error) {
         console.warn("[KBC Attendance][TeamsQrPanel] Teams SDK initialization failed.", error);
         if (!disposed) {
           setShareAllowed(false);
+          setIsStageShared(false);
           setShareMessage("Open this page inside a Teams meeting to share it to the meeting stage.");
         }
       }
@@ -155,6 +211,12 @@ export default function TeamsQrPanel() {
     setRetryCount((value) => value + 1);
   };
 
+  const refreshSharingState = async () => {
+    const sharingState = await getStageSharingState();
+    setIsStageShared(sharingState);
+    return sharingState;
+  };
+
   const handleShare = async () => {
     if (shareBusy || !shareAllowed) {
       return;
@@ -164,11 +226,31 @@ export default function TeamsQrPanel() {
     setShareMessage("");
 
     try {
-      await sharePanelToStage(panelUrl);
-      setShareMessage("This panel is now being shared to the meeting stage.");
+      if (isStageShared) {
+        await stopSharingPanelFromStage();
+        const sharingState = await refreshSharingState();
+        setShareMessage(
+          sharingState
+            ? "Teams kept this panel on the meeting stage."
+            : "This panel is no longer being shared to the meeting stage.",
+        );
+      } else {
+        await sharePanelToStage(panelUrl);
+        const sharingState = await refreshSharingState();
+        setShareMessage(
+          sharingState
+            ? "This panel is now being shared to the meeting stage."
+            : "Teams accepted the share request. If the stage does not change, use the meeting side panel Share action once.",
+        );
+      }
     } catch (error) {
-      console.error("[KBC Attendance][TeamsQrPanel] Share to stage failed.", error);
-      setShareMessage(readShareError(error));
+      console.error("[KBC Attendance][TeamsQrPanel] Share to stage action failed.", error);
+      const sharingState = await refreshSharingState();
+      setShareMessage(
+        sharingState && !isStageShared
+          ? "This panel is already being shared to the meeting stage."
+          : readShareError(error),
+      );
     } finally {
       setShareBusy(false);
     }
@@ -232,7 +314,7 @@ export default function TeamsQrPanel() {
             onClick={handleShare}
             disabled={!shareAllowed || shareBusy}
           >
-            {shareBusy ? "Sharing..." : "Share screen"}
+            {shareBusy ? (isStageShared ? "Stopping..." : "Sharing...") : isStageShared ? "Stop sharing" : "Share to stage"}
           </Button>
 
           {shareMessage ? <p style={styles.shareMessage}>{shareMessage}</p> : null}
