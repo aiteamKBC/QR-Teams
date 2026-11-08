@@ -14,18 +14,22 @@
 
 Manifest files are under `frontend/teams-app/manifest`.
 
+The current package opens `https://lms.kentbusinesscollege.org/qr-attendance`
+directly. See `teams-app/manifest/README.md` for packaging and update steps.
+The local QR panel and tab configuration pages share this destination through
+`src/attendance.ts`.
+
 Zip and upload only:
 
 - `manifest.json`
 - `color.png`
 - `outline.png`
 
-## Moving from ngrok to real domain
+## Changing the Teams destination
 
-When switching to production domain:
+When changing the attendance destination:
 
-1. Update `manifest.json` URLs and `validDomains` from ngrok to your real domain.
-2. Update frontend env values:
-   - `VITE_PUBLIC_APP_BASE_URL=https://app.yourdomain.com`
-   - `VITE_API_BASE_URL=https://api.yourdomain.com` (or leave empty for same-origin reverse proxy).
-3. Re-zip manifest package and re-upload app to Teams.
+1. Update `manifest.json` navigation URLs and `validDomains`, and increment its app version.
+2. Update `src/attendance.ts` and backend `TEAMS_QR_PANEL_PUBLIC_URL` to the same full URL.
+3. Build the frontend and re-zip the manifest package. Upload the ZIP as an update to the existing Teams app.
+4. Apply frontend/backend changes to the running services separately; local edits do not update deployed services.

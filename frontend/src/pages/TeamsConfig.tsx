@@ -1,13 +1,13 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { app, pages } from "@microsoft/teams-js";
+import { ATTENDANCE_URL } from "../attendance";
 
-const CONTENT_URL = "https://qrteams.kentbusinesscollege.net/teams/qr-panel";
 const DISPLAY_NAME = "KBC Attendance";
 const TAB_CONFIG = {
   entityId: "qr-panel-static",
   suggestedDisplayName: DISPLAY_NAME,
-  contentUrl: CONTENT_URL,
-  websiteUrl: CONTENT_URL,
+  contentUrl: ATTENDANCE_URL,
+  websiteUrl: ATTENDANCE_URL,
 };
 
 export default function TeamsConfig() {

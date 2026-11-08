@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { LinkRegular } from "@fluentui/react-icons";
 import { app } from "@microsoft/teams-js";
 import { QRCodeSVG } from "qrcode.react";
+import { ATTENDANCE_URL } from "../attendance";
 
 const STUDENT_UI_IMAGE_SRC = "/assets/attendance-student-ui.png";
-const ATTENDANCE_URL = "https://lms.kentbusinesscollege.org/qr-attendance";
 
 export default function TeamsQrPanel() {
   const [isLoaded, setIsLoaded] = useState(false);

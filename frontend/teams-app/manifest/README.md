@@ -1,51 +1,36 @@
-## Teams Manifest Setup (Current Temporary Test Session)
+﻿# KBC Attendance Teams package
 
-Current frontend ngrok URL:
+The current `manifest.json` opens this attendance page directly:
 
-- `https://gastroenteritic-semisolemnly-kelly.ngrok-free.dev`
+`https://lms.kentbusinesscollege.org/qr-attendance`
 
-`manifest.json` is currently configured to use only this frontend domain:
+- App version: `2.0.32`.
+- App ID: `5d1360ac-b336-4cd5-8db5-440296b1f366` (unchanged).
+- `developer.websiteUrl`, `staticTabs.contentUrl`, and `staticTabs.websiteUrl` use the attendance URL.
+- `validDomains` contains `lms.kentbusinesscollege.org`.
+- Privacy and terms links retain their existing destinations; no replacement legal pages were supplied.
+- The local `/teams/qr-panel` route still displays the QR panel. The Teams package now opens the LMS page instead.
 
-- `validDomains`: `["gastroenteritic-semisolemnly-kelly.ngrok-free.dev"]`
-- `staticTabs`: handles meeting surfaces without a Save/config page
-- `configurableTabs`: handles `team` channel tabs only
-- `context`: includes `meetingSidePanel`, `meetingChatTab`, `meetingDetailsTab`, `meetingStage`
-- `manifest.json` can omit meeting-stage `resourceSpecific` permissions if you want the app to install without the extra consent prompt; in that mode, share flow falls back to link/deep-link instead of stage sharing
-- `activities.activityTypes`: includes `attendanceReady` for activity feed notification template
+## Build the upload package
 
-## Real Teams Meeting Test Flow (Single ngrok)
+Run from the repository root in PowerShell:
 
-1. Start backend on port `8000`:
-
-```bash
-cd backend
-python manage.py runserver 8000
+```powershell
+Compress-Archive -Path frontend/teams-app/manifest/manifest.json,frontend/teams-app/manifest/color.png,frontend/teams-app/manifest/outline.png -DestinationPath frontend/teams-app/manifest/KBC-Attendance-2.0.32.zip -Force
 ```
 
-2. Start frontend on port `5173` and host `0.0.0.0`:
+The ZIP must contain exactly `manifest.json`, `color.png`, and `outline.png` at its root.
 
-```bash
-cd frontend
-npm install
-npm run dev -- --host 0.0.0.0 --port 5173
-```
+## Apply the update
 
-3. Start ngrok for frontend only:
+1. In Teams Admin Center, open `Teams apps > Manage apps > KBC Attendance`.
+2. Upload the ZIP as an update to the existing app, keeping the same app ID.
+3. Allow the update to propagate, then verify that Teams shows version `2.0.32`.
+4. Test the developer website link and open the app in a meeting or chat.
+5. If an existing tab retains its saved old URL, reconfigure or remove and re-add that tab after the app update.
 
-```bash
-ngrok http 5173
-```
+Changing `backend/.env` does not update the package installed in Teams. `TEAMS_QR_PANEL_PUBLIC_URL` controls notification web-link fallback and should use the same attendance URL; restart the backend after changing it.
 
-4. If ngrok domain changed, update `manifest.json` URLs and `validDomains` to the new frontend domain.
-5. Re-zip Teams package files:
-   - `manifest.json`
-   - `color.png`
-   - `outline.png`
-6. Re-upload the custom app package in Microsoft Teams.
-7. Upload the app package in Microsoft Teams, then add it inside the target Team/channel or meeting chat as needed.
-8. If you move to production domain, replace all ngrok URLs and `validDomains` then re-upload.
+The LMS page is hosted outside this repository. A successful HTTP response alone does not verify Teams compatibility: test its Teams SDK initialization, framing policy, and sign-in behavior inside Teams.
 
-## Production manifest template
-
-- `manifest.production.template.json` is included for real-domain cutover and Graph notification permissions.
-- Replace placeholders, save as `manifest.json`, then package with icons for production upload.
+`manifest.production.template.json` is a generic template for a separately hosted QR panel; it is not the current upload manifest.

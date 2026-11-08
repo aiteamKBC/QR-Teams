@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { app, pages } from "@microsoft/teams-js";
-
-const APP_BASE_URL =
-  import.meta.env.VITE_PUBLIC_APP_BASE_URL?.replace(/\/$/, "") ||
-  window.location.origin;
-
-const CONTENT_URL = `${APP_BASE_URL}/teams/qr-panel`;
+import { ATTENDANCE_URL } from "../attendance";
 
 export default function TeamsTabConfig() {
   const [status, setStatus] = useState("Initializing Teams tab configuration...");
@@ -15,8 +10,8 @@ export default function TeamsTabConfig() {
     () => ({
       entityId: "qr-panel-static",
       suggestedDisplayName: "KBC Attendance",
-      contentUrl: CONTENT_URL,
-      websiteUrl: CONTENT_URL,
+      contentUrl: ATTENDANCE_URL,
+      websiteUrl: ATTENDANCE_URL,
     }),
     [],
   );
@@ -61,12 +56,8 @@ export default function TeamsTabConfig() {
           <div>{insideTeams ? "Yes" : "No"}</div>
         </div>
         <div style={styles.item}>
-          <div style={styles.label}>Public App Base URL</div>
-          <div style={styles.breakWord}>{APP_BASE_URL}</div>
-        </div>
-        <div style={styles.item}>
           <div style={styles.label}>Configured Content URL</div>
-          <div style={styles.breakWord}>{CONTENT_URL}</div>
+          <div style={styles.breakWord}>{ATTENDANCE_URL}</div>
         </div>
       </div>
     </div>

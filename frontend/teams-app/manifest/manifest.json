@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "2.0.31",
+  "version": "2.0.32",
   "id": "5d1360ac-b336-4cd5-8db5-440296b1f366",
   "name": {
     "short": "KBC Attendance",
@@ -9,7 +9,7 @@
   },
   "developer": {
     "name": "KBC Attendance",
-    "websiteUrl": "https://qrteams.kentbusinesscollege.net",
+    "websiteUrl": "https://lms.kentbusinesscollege.org/qr-attendance",
     "privacyUrl": "https://qrteams.kentbusinesscollege.net",
     "termsOfUseUrl": "https://qrteams.kentbusinesscollege.net"
   },
@@ -30,8 +30,8 @@
     {
       "entityId": "qr-panel-static",
       "name": "QR Panel",
-      "contentUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
-      "websiteUrl": "https://qrteams.kentbusinesscollege.net/teams/qr-panel",
+      "contentUrl": "https://lms.kentbusinesscollege.org/qr-attendance",
+      "websiteUrl": "https://lms.kentbusinesscollege.org/qr-attendance",
       "scopes": [
         "team",
         "groupChat"
@@ -67,6 +67,6 @@
     "privateChannels"
   ],
   "validDomains": [
-    "qrteams.kentbusinesscollege.net"
+    "lms.kentbusinesscollege.org"
   ]
 }
