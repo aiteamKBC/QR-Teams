@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { LinkRegular } from "@fluentui/react-icons";
 import { app } from "@microsoft/teams-js";
+import { QRCodeSVG } from "qrcode.react";
 
 const STUDENT_UI_IMAGE_SRC = "/assets/attendance-student-ui.png";
-const ATTENDANCE_URL = "https://attendance.kentbusinesscollege.net/";
+const ATTENDANCE_URL = "https://lms.kentbusinesscollege.org/qr-attendance";
 
 export default function TeamsQrPanel() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -71,20 +72,30 @@ export default function TeamsQrPanel() {
                   <div style={styles.loader} aria-hidden />
                 </div>
               )}
-              <img
-                src={imageSrc}
-                alt="Attendance QR"
-                style={isLoaded ? styles.image : styles.hiddenImage}
-                draggable={false}
-                onLoad={() => {
-                  setIsLoaded(true);
-                  setHasError(false);
-                }}
-                onError={() => {
-                  setHasError(true);
-                  setIsLoaded(false);
-                }}
-              />
+              <div style={isLoaded ? styles.artwork : styles.hiddenImage}>
+                <img
+                  src={imageSrc}
+                  alt="Kent Business College Attendance"
+                  style={styles.image}
+                  draggable={false}
+                  onLoad={() => {
+                    setIsLoaded(true);
+                    setHasError(false);
+                  }}
+                  onError={() => {
+                    setHasError(true);
+                    setIsLoaded(false);
+                  }}
+                />
+                <QRCodeSVG
+                  value={ATTENDANCE_URL}
+                  title="Attendance QR"
+                  size={398}
+                  marginSize={4}
+                  level="M"
+                  style={styles.qrOverlay}
+                />
+              </div>
             </>
           ) : (
             <div style={styles.errorCard}>
@@ -192,6 +203,21 @@ const styles: Record<string, CSSProperties> = {
     border: "4px solid rgba(79, 70, 229, 0.18)",
     borderTopColor: "#4f46e5",
     animation: "spin 1s linear infinite",
+  },
+  artwork: {
+    position: "relative",
+    height: "100%",
+    aspectRatio: "711 / 888",
+    maxWidth: "100%",
+    flexShrink: 0,
+  },
+  qrOverlay: {
+    // Cover the printed QR in the original 711 x 888 artwork.
+    position: "absolute",
+    left: `${(168 / 711) * 100}%`,
+    top: `${(374 / 888) * 100}%`,
+    width: `${(398 / 711) * 100}%`,
+    height: `${(398 / 888) * 100}%`,
   },
   image: {
     width: "100%",
